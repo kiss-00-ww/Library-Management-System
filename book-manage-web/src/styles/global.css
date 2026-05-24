@@ -1,0 +1,237 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #app {
+  height: 100%;
+  background-color: var(--page-bg);
+  color: #303133;
+}
+
+body {
+  font-family: var(--el-font-family);
+  font-size: var(--el-font-size-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.el-card {
+  border-radius: var(--el-border-radius-base);
+  box-shadow: var(--el-box-shadow-light);
+  margin-bottom: var(--card-gap);
+}
+
+.el-card__header {
+  padding: 14px var(--card-padding);
+  border-bottom: 1px solid #ebeef5;
+  font-weight: 600;
+}
+
+.el-card__body {
+  padding: var(--card-padding);
+}
+
+.el-table {
+  --el-table-border-color: #ebeef5;
+}
+
+.el-table--striped .el-table__body tr.el-table__row--striped td {
+  background: #fafbfc;
+}
+
+.el-table .el-table__body tr.el-table__row--striped.current-row td,
+.el-table .el-table__body tr.el-table__row--striped:hover td,
+.el-table--striped .el-table__body tr.el-table__row--striped.current-row td,
+.el-table--striped .el-table__body tr.el-table__row--striped:hover td {
+  background: #ecf5ff;
+}
+
+.el-table .el-table__body tr:hover > td {
+  background: #f0f7ff;
+}
+
+.el-table th.el-table__cell {
+  background: #fafbfc;
+  color: #606266;
+  font-weight: 600;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.el-table__empty-text {
+  color: #909399;
+  font-size: 14px;
+}
+
+.el-table__empty-block {
+  min-height: 120px;
+}
+
+.overdue-row td {
+  background-color: #fef0f0 !important;
+}
+
+.overdue-row:hover td {
+  background-color: #fde2e2 !important;
+}
+
+.el-table .el-button--small.is-link {
+  padding: 0 4px;
+  margin: 0 2px;
+}
+
+.el-table td .el-tag {
+  font-weight: 500;
+}
+
+.el-button {
+  border-radius: var(--el-border-radius-base);
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.el-button:hover {
+  transform: translateY(-1px);
+}
+
+.el-button--primary {
+  --el-button-bg-color: var(--el-color-primary);
+  --el-button-border-color: var(--el-color-primary);
+  --el-button-hover-bg-color: var(--el-color-primary-light-2);
+  --el-button-hover-border-color: var(--el-color-primary-light-2);
+  --el-button-active-bg-color: var(--el-color-primary-dark-1);
+}
+
+.el-button--danger {
+  --el-button-bg-color: var(--el-color-danger);
+  --el-button-border-color: var(--el-color-danger);
+}
+
+.el-button--default {
+  --el-button-bg-color: #f4f4f5;
+  --el-button-border-color: #dcdfe6;
+  --el-button-text-color: #606266;
+  --el-button-hover-bg-color: #e9e9eb;
+  --el-button-hover-border-color: #c6e2ff;
+  --el-button-hover-text-color: var(--el-color-primary);
+}
+
+.el-form-item {
+  margin-bottom: 18px;
+}
+
+.el-form-item__label {
+  justify-content: flex-start;
+  font-weight: 500;
+  color: #606266;
+}
+
+/* 统一搜索栏样式 */
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 4px 0;
+}
+
+.search-bar .el-input,
+.search-bar .el-select {
+  max-width: none;
+}
+
+.search-bar .el-button--default {
+  --el-button-bg-color: #f4f4f5;
+  --el-button-border-color: #dcdfe6;
+}
+
+.el-input,
+.el-select,
+.el-date-picker,
+.el-input-number {
+  max-width: 400px;
+}
+
+.el-dialog {
+  border-radius: 8px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.12);
+}
+
+.el-dialog__header {
+  padding: 20px 24px 14px;
+  border-bottom: 1px solid #ebeef5;
+  margin-right: 0;
+}
+
+.el-dialog__body {
+  padding: 20px 24px;
+}
+
+.el-dialog__footer {
+  padding: 14px 24px 20px;
+  border-top: 1px solid #ebeef5;
+}
+
+.el-pagination {
+  padding: 10px 0;
+}
+
+.el-tag {
+  border-radius: var(--el-border-radius-base);
+  font-weight: 500;
+}
+
+.el-select-dropdown__item {
+  border-radius: var(--el-border-radius-small);
+}
+
+.el-loading-mask {
+  border-radius: var(--el-border-radius-base);
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.25s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.fade-slide-enter-active {
+  transition: all 0.3s ease-out;
+}
+
+.fade-slide-leave-active {
+  transition: all 0.2s ease-in;
+}
+
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #dcdfe6;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #c0c4cc;
+}

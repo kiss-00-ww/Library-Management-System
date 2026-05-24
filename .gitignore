@@ -1,0 +1,33 @@
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Java
+target/
+*.class
+*.jar
+*.war
+
+# Node
+node_modules/
+dist/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Maven
+*.lastUpdated
+
+# Uploads
+uploads/

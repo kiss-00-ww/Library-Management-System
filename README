@@ -1,0 +1,352 @@
+以下是基于您提供的技术文章大纲，补充完善的《SpringBoot + Vue 图书管理系统》需求规格说明书与数据库设计文档。内容详细，可直接用于项目开发参考。
+
+---
+
+# 图书管理系统开发文档
+**版本**：1.0  
+**技术架构**：SpringBoot + Vue 3 + Element Plus + MySQL  
+**文档类型**：需求规格说明书 & 数据库设计 & 接口设计概要
+
+---
+
+## 一、需求规格说明书
+
+### 1.1 系统背景与目标
+传统图书管理依赖人工登记，存在效率低、易出错、查询不便等问题。本系统旨在构建一个基于 Web 的图书管理平台，实现图书信息、借阅记录、用户权限的数字化管理，提升图书资源利用效率，降低运维成本，支持管理员与普通读者两类角色的日常操作。
+
+**核心目标**：
+- 提供图书信息的增删改查、分类检索。
+- 实现借书、还书、续借等核心业务流程自动化。
+- 普通用户可查看个人借阅历史、当前借阅状态，管理个人信息。
+- 管理员拥有全局图书管理、用户管理、数据统计等高级权限。
+- 系统响应快速、界面友好，支持主流浏览器，易于部署和维护。
+
+### 1.2 用户角色分析
+| 角色 | 职责描述 |
+|------|----------|
+| **普通读者** | 注册/登录、浏览图书、搜索图书、查看详情、借阅图书、归还图书、查看个人借阅记录、修改个人信息。 |
+| **管理员** | 管理全部图书（增删改查）、管理用户账号（禁用/启用）、查看所有借阅记录、处理逾期罚款、数据统计概览。 |
+| **系统** | 自动计算借阅到期日期、逾期天数，发送逾期提醒（可扩展），维护图书库存状态，记录操作日志。 |
+
+### 1.3 功能性需求（详细用例）
+#### 1.3.1 用户管理模块
+- **注册**：用户填写用户名、密码、邮箱、手机号等进行注册，系统校验唯一性。
+- **登录/登出**：支持账号密码登录，返回JWT令牌实现鉴权；登出失效令牌。
+- **个人信息维护**：修改密码、联系方式，查看账户状态（正常/被冻结）。
+- **管理员-用户列表**：分页查询所有用户，可按状态筛选，支持启用/禁用账户。
+
+#### 1.3.2 图书管理模块（管理员核心）
+- **添加图书**：录入书名、作者、ISBN、出版社、分类、出版日期、总册数、馆藏位置、简介、封面图片。
+- **编辑图书**：修改除ISBN外的其他字段（ISBN作为唯一标识不可变）。
+- **删除图书**：逻辑删除（状态标记为下架），若存在未归还借阅则提示不可物理删除。
+- **图书列表**：支持按书名、作者、ISBN、分类模糊搜索，按出版日期范围筛选，排序（库存、上架时间）。
+- **图书详情**：展示完整信息，包括当前可借数量、总册数。
+
+#### 1.3.3 借阅管理模块
+- **借阅图书**：
+  - 读者选中图书发起借阅，系统校验库存（可借数量>0）、用户是否有逾期未还或借阅数量上限（例如同时最多借5本）。
+  - 生成借阅记录，状态“借出”，记录借出日期、应还日期（默认30天），扣减可借库存。
+- **归还图书**：
+  - 读者或管理员扫描/选择借阅记录操作归还，更新状态为“已还”，实际归还日期，增加可借库存。
+  - 若逾期，系统自动计算罚款（规则可配置，如每天0.1元）。
+- **续借**：在到期前且无他人预约的情况下，允许续借一次，延长归还日期（如加30天），记录续借次数。
+- **借阅历史**：读者可查看个人全部借阅记录，管理员可全局查看，支持按状态、日期筛选。
+
+#### 1.3.4 查询与统计（管理员）
+- **图书库存统计**：按分类统计总册数、可借数量、借出数量。
+- **借阅排行**：近30天热门借阅图书Top10。
+- **逾期未还报表**：列出所有逾期借阅明细，支持导出。
+
+### 1.4 非功能性需求
+- **性能**：核心接口响应时间 < 500ms（95分位），支持至少100并发用户。
+- **安全**：使用JWT + Spring Security进行接口鉴权；密码加密存储（BCrypt）；防SQL注入（MyBatis预编译）；跨域请求白名单控制。
+- **可用性**：系统7×24小时可用，停机维护可在凌晨低峰。
+- **可维护性**：前后端分离，代码结构清晰，关键业务有日志记录（SLF4J + Logback）。
+- **兼容性**：前端支持Chrome/Firefox/Edge最新版本。
+- **扩展性**：预留短信/邮件提醒接口，支持容器化部署。
+
+### 1.5 业务规则与约束
+- 同一读者对同一本书不可重复借阅（除非已归还）。
+- 借阅期限30天，可续借1次，续借后累计期限60天。
+- 逾期罚款：0.1元/册/天，上限不超过图书原价。
+- 读者最大同时借阅数：5册。
+- ISBN全局唯一，图书可复本（同一ISBN有多册，用“总册数”管理）。
+- 归还操作仅限读者本人或管理员执行，需校验权限。
+
+---
+
+## 二、系统架构设计概要
+
+采用前后端完全分离的B/S架构：
+
+- **前端**：Vue 3 + Element Plus + Axios + Pinia，运行在Nginx上。
+- **后端**：SpringBoot 2.7+ 提供RESTful API，分层模型（Controller-Service-Mapper）。
+- **认证授权**：Spring Security + JWT，无状态会话。
+- **数据存储**：MySQL 8.0，使用MyBatis-Plus简化CRUD。
+- **接口文档**：集成Knife4j（Swagger增强），方便调试。
+- **部署**：前端静态资源挂载Nginx，后端打Jar包运行，可选Docker。
+
+前后端交互采用JSON格式，统一返回体：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {}
+}
+```
+
+---
+
+## 三、数据库设计
+
+### 3.1 E-R 图核心实体关系
+- **用户**（User） 1..n —— 借阅记录（BorrowRecord） n..1 —— 图书（Book）
+- **图书** 与 **分类**（Category） 多对一
+- **管理员** 是用户实体的扩展，通过角色字段区分（role: ADMIN/READER）
+
+### 3.2 数据库表详细设计
+
+#### 1. 用户表 (user)
+| 字段名 | 数据类型 | 约束 | 描述 |
+|--------|----------|------|------|
+| id | BIGINT | PK, AUTO_INCREMENT | 用户ID |
+| username | VARCHAR(50) | NOT NULL, UNIQUE | 登录用户名 |
+| password | VARCHAR(255) | NOT NULL | BCrypt加密密码 |
+| real_name | VARCHAR(50) | NOT NULL | 真实姓名 |
+| email | VARCHAR(100) | UNIQUE | 电子邮箱 |
+| phone | VARCHAR(20) | | 手机号码 |
+| role | ENUM('ADMIN','READER') | NOT NULL, DEFAULT 'READER' | 角色 |
+| status | TINYINT | NOT NULL, DEFAULT 1 | 账户状态：1启用，0禁用 |
+| avatar | VARCHAR(255) | | 头像URL |
+| create_time | DATETIME | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 注册时间 |
+| update_time | DATETIME | ON UPDATE CURRENT_TIMESTAMP | 最后修改时间 |
+| deleted | TINYINT | NOT NULL, DEFAULT 0 | 逻辑删除标志 |
+
+**索引**：
+- UK_username (username)
+- UK_email (email)
+- idx_role_status (role, status)
+
+#### 2. 图书分类表 (category) – 可选，便于扩展
+| 字段名 | 数据类型 | 约束 | 描述 |
+|--------|----------|------|------|
+| id | INT | PK, AUTO_INCREMENT | 分类ID |
+| name | VARCHAR(50) | NOT NULL, UNIQUE | 分类名称（文学、科技等） |
+| description | VARCHAR(255) | | 描述 |
+| created_at | DATETIME | DEFAULT CURRENT_TIMESTAMP | |
+| updated_at | DATETIME | ON UPDATE CURRENT_TIMESTAMP | |
+
+#### 3. 图书表 (book)
+| 字段名 | 数据类型 | 约束 | 描述 |
+|--------|----------|------|------|
+| id | BIGINT | PK, AUTO_INCREMENT | 图书ID |
+| isbn | VARCHAR(20) | NOT NULL, UNIQUE | 国际标准书号 |
+| title | VARCHAR(255) | NOT NULL | 书名 |
+| author | VARCHAR(100) | NOT NULL | 作者 |
+| publisher | VARCHAR(100) | | 出版社 |
+| category_id | INT | FK 参照 category(id) | 分类ID |
+| publish_date | DATE | | 出版日期 |
+| description | TEXT | | 简介 |
+| cover_image | VARCHAR(255) | | 封面图片URL |
+| total_quantity | INT | NOT NULL, DEFAULT 1 | 总复本数 |
+| available_quantity | INT | NOT NULL, DEFAULT 1 | 可借数量 |
+| location | VARCHAR(100) | | 馆藏位置（书架编号） |
+| status | TINYINT | NOT NULL, DEFAULT 1 | 1上架，0下架 |
+| create_time | DATETIME | DEFAULT CURRENT_TIMESTAMP | |
+| update_time | DATETIME | ON UPDATE CURRENT_TIMESTAMP | |
+| deleted | TINYINT | DEFAULT 0 | 逻辑删除 |
+
+**约束检查**：available_quantity <= total_quantity 且 >=0 （应用层保证，可加CHECK约束）
+**索引**：
+- UK_isbn (isbn)
+- idx_title_author (title, author) - 全文索引或普通索引
+- idx_category (category_id)
+
+#### 4. 借阅记录表 (borrow_record)
+| 字段名 | 数据类型 | 约束 | 描述 |
+|--------|----------|------|------|
+| id | BIGINT | PK, AUTO_INCREMENT | 记录ID |
+| user_id | BIGINT | NOT NULL, FK 参照 user(id) | 借阅人ID |
+| book_id | BIGINT | NOT NULL, FK 参照 book(id) | 图书ID |
+| borrow_date | DATETIME | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 借出日期 |
+| due_date | DATETIME | NOT NULL | 应还日期 |
+| return_date | DATETIME | | 实际归还日期 |
+| status | ENUM('BORROWED','RETURNED','RENEWED','OVERDUE') | NOT NULL, DEFAULT 'BORROWED' | 状态 |
+| renew_count | TINYINT | DEFAULT 0 | 续借次数 |
+| fine_amount | DECIMAL(10,2) | DEFAULT 0.00 | 罚款金额（已结算） |
+| return_operator | BIGINT | FK user(id) | 操作归还的管理员/读者ID |
+| create_time | DATETIME | DEFAULT CURRENT_TIMESTAMP | |
+| update_time | DATETIME | ON UPDATE CURRENT_TIMESTAMP | |
+
+**索引**：
+- idx_user_id (user_id)
+- idx_book_id (book_id)
+- idx_status (status)
+- idx_due_date (due_date)
+
+#### 5. 操作日志表 (operation_log) – 扩展审计
+| 字段名 | 数据类型 | 约束 | 描述 |
+|--------|----------|------|------|
+| id | BIGINT | PK, AUTO_INCREMENT | |
+| operator_id | BIGINT | FK user(id) | 操作人 |
+| module | VARCHAR(50) | | 操作模块 (图书/用户/借阅) |
+| type | VARCHAR(50) | | 操作类型 (新增/修改/删除) |
+| content | VARCHAR(500) | | 日志描述 |
+| ip | VARCHAR(50) | | 操作IP |
+| create_time | DATETIME | DEFAULT CURRENT_TIMESTAMP | |
+
+### 3.3 SQL建表语句示例（MySQL 8.0）
+
+```sql
+CREATE TABLE `user` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `username` VARCHAR(50) NOT NULL,
+  `password` VARCHAR(255) NOT NULL,
+  `real_name` VARCHAR(50) NOT NULL,
+  `email` VARCHAR(100) DEFAULT NULL,
+  `phone` VARCHAR(20) DEFAULT NULL,
+  `role` ENUM('ADMIN','READER') NOT NULL DEFAULT 'READER',
+  `status` TINYINT NOT NULL DEFAULT 1,
+  `avatar` VARCHAR(255) DEFAULT NULL,
+  `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` TINYINT NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_username` (`username`),
+  UNIQUE KEY `uk_email` (`email`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `book` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `isbn` VARCHAR(20) NOT NULL,
+  `title` VARCHAR(255) NOT NULL,
+  `author` VARCHAR(100) NOT NULL,
+  `publisher` VARCHAR(100) DEFAULT NULL,
+  `category_id` INT DEFAULT NULL,
+  `publish_date` DATE DEFAULT NULL,
+  `description` TEXT,
+  `cover_image` VARCHAR(255) DEFAULT NULL,
+  `total_quantity` INT NOT NULL DEFAULT 1,
+  `available_quantity` INT NOT NULL DEFAULT 1,
+  `location` VARCHAR(100) DEFAULT NULL,
+  `status` TINYINT NOT NULL DEFAULT 1,
+  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `update_time` DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` TINYINT DEFAULT 0,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_isbn` (`isbn`),
+  KEY `idx_category` (`category_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `borrow_record` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `user_id` BIGINT NOT NULL,
+  `book_id` BIGINT NOT NULL,
+  `borrow_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `due_date` DATETIME NOT NULL,
+  `return_date` DATETIME DEFAULT NULL,
+  `status` ENUM('BORROWED','RETURNED','RENEWED','OVERDUE') NOT NULL DEFAULT 'BORROWED',
+  `renew_count` TINYINT DEFAULT 0,
+  `fine_amount` DECIMAL(10,2) DEFAULT 0.00,
+  `return_operator` BIGINT DEFAULT NULL,
+  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `update_time` DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_user` (`user_id`),
+  KEY `idx_book` (`book_id`),
+  KEY `idx_status` (`status`),
+  CONSTRAINT `fk_borrow_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`),
+  CONSTRAINT `fk_borrow_book` FOREIGN KEY (`book_id`) REFERENCES `book` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+---
+
+## 四、核心接口设计（RESTful API 部分示例）
+
+### 4.1 认证接口
+- `POST /api/auth/register`  用户注册
+- `POST /api/auth/login`  登录返回JWT
+- `GET /api/auth/info`  获取当前登录用户信息
+
+### 4.2 用户管理（管理员）
+- `GET /api/admin/users`  分页查询用户列表（参数page,size,keyword,status）
+- `PUT /api/admin/users/{id}/status`  修改用户状态
+- `DELETE /api/admin/users/{id}`  逻辑删除用户
+
+### 4.3 图书管理
+- `GET /api/books`  图书列表（分页、搜索条件：title,author,isbn,category,status）
+- `GET /api/books/{id}`  图书详情
+- `POST /api/admin/books`  新增图书（管理员）
+- `PUT /api/admin/books/{id}`  修改图书（管理员）
+- `DELETE /api/admin/books/{id}`  下架图书（管理员）
+
+### 4.4 借阅操作
+- `POST /api/borrow`  借阅图书（参数：bookId），需带Bearer Token
+- `POST /api/return/{recordId}`  归还图书
+- `POST /api/renew/{recordId}`  续借
+- `GET /api/borrow/my`  我的借阅记录（分页，可筛选状态）
+- `GET /api/admin/borrows`  管理员查看全部记录
+
+### 4.5 统计接口
+- `GET /api/admin/statistics/inventory`  库存统计概览
+- `GET /api/admin/statistics/popular`  热门借阅排行
+
+所有接口统一Base URL：`/api`，鉴权Header：`Authorization: Bearer <token>`。
+
+---
+
+## 五、开发与部署指南（简述）
+
+### 5.1 后端项目结构
+```
+book-manage-server
+├── src/main/java/com/xxx/book
+│   ├── config/         -- Security、CORS等配置
+│   ├── controller/     -- REST控制器
+│   ├── service/        -- 业务逻辑接口与实现
+│   ├── mapper/         -- MyBatis接口
+│   ├── entity/         -- 实体类
+│   ├── dto/            -- 数据传输对象
+│   ├── utils/          -- JWT工具等
+│   └── handler/        -- 全局异常处理
+├── src/main/resources
+│   ├── application.yml
+│   └── mapper/         -- XML映射文件（若未用注解）
+└── pom.xml
+```
+
+### 5.2 前端项目结构
+```
+book-manage-web
+├── src
+│   ├── api/            -- Axios接口封装
+│   ├── views/          -- 页面组件（BookList, BorrowManage, UserCenter...）
+│   ├── router/         -- Vue路由
+│   ├── store/          -- Pinia状态
+│   ├── utils/          -- 工具函数（token等）
+│   └── components/     -- 公共组件
+├── public/
+└── package.json
+```
+
+### 5.3 打包与部署
+- **后端**：`mvn clean package` 生成fat jar，直接 `java -jar` 运行，或使用Docker部署。
+- **前端**：`npm run build` 生成dist目录，配置Nginx反向代理解决跨域，代理 `/api` 到后端服务。
+- **数据库初始化**：执行提供的SQL脚本，并插入分类、管理员初始数据。
+
+---
+
+## 六、总结与扩展
+
+本文档详细定义了图书管理系统的功能需求、数据库模型和接口规范，可直接指导后续开发。项目通过前后端分离，实现了业务解耦，便于团队协作和后期维护。在实现过程中，需要注意高并发借阅的库存一致性问题（可使用乐观锁或数据库行锁），以及系统安全的持续加强。
+
+**扩展建议**：
+- 使用Redis缓存热门图书数据，提升性能。
+- 引入消息队列，异步处理超时提醒、统计任务。
+- 开发微信小程序端或移动App，实现多端适配。
+- 集成Elasticsearch提供全文检索图书。
+- 添加数据看板，支持图表展示（ECharts集成到Vue）。
+
+---
